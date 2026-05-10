@@ -29,9 +29,7 @@ const DEFAULT_USERS = [
   { id: 'user3', pw: 'pass3', name: '탐험가3', role: 'user', stars: 0, solved: [], history: [] },
   { id: 'admin', pw: 'admin123', name: '관리자', role: 'admin', stars: 0, solved: [], history: [] }
 ];
-  locations: [],
-  quizzes: []
-};
+
 
 const DEFAULT_LOCATIONS = [
   { name: '경복궁', lat: 37.5796, lng: 126.9770 },
@@ -562,7 +560,7 @@ function renderUserList() {
     div.innerHTML = `
       <div class="admin-item-info">
         <p>${u.name} (${u.id}) - ${u.role === 'admin' ? '👑 관리자' : '🧭 일반'}</p>
-        <span>⭐ ${u.stars}개 | 푼 퀴즈: ${u.solved.length}개</span>
+        <span>⭐ ${u.stars || 0}개 | 푼 퀴즈: ${u.solved ? u.solved.length : 0}개</span>
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="btn-accent reset-btn" data-user-id="${u.id}" style="padding: 6px 10px;">초기화</button>
