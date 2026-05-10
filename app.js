@@ -373,6 +373,20 @@ function openQuiz(location) {
     }
   }
 
+  // Cooldown check
+  if (currentUser.cooldowns && currentUser.cooldowns[location.id]) {
+    const lastFailedTime = currentUser.cooldowns[location.id];
+    const diff = Date.now() - lastFailedTime;
+    const cooldownMs = 5 * 60 * 1000;
+    if (diff < cooldownMs) {
+      const remainingMs = cooldownMs - diff;
+      const min = Math.floor(remainingMs / 60000);
+      const sec = Math.floor((remainingMs % 60000) / 1000);
+      showToast(`⏳ 오답 페널티! ${min}분 ${sec}초 후에 다시 도전할 수 있습니다.`, 'error');
+      return;
+    }
+  }
+
   activeLocationId = location.id;
   // Pick random quiz
   const randomIndex = Math.floor(Math.random() * DATA.quizzes.length);
@@ -424,6 +438,7 @@ function showResult(correct, location) {
   let newStars = currentUser.stars;
   let newSolved = [...currentUser.solved];
   let newHistory = [...currentUser.history];
+  let newCooldowns = currentUser.cooldowns || {};
 
   if (correct) {
     DOM.resultIcon.textContent = '⭐';
@@ -439,8 +454,9 @@ function showResult(correct, location) {
     }
   } else {
     DOM.resultIcon.textContent = '❌';
-    DOM.resultText.textContent = '틀렸습니다! 다시 도전해보세요.';
+    DOM.resultText.textContent = '틀렸습니다! 5분 후에 다시 도전할 수 있습니다.';
     DOM.resultText.style.color = 'var(--danger)';
+    newCooldowns[location.id] = Date.now();
   }
 
   // Record history
@@ -455,7 +471,8 @@ function showResult(correct, location) {
   db.collection('users').doc(currentUser.docId).update({
     stars: newStars,
     solved: newSolved,
-    history: newHistory
+    history: newHistory,
+    cooldowns: newCooldowns
   });
 }
 
@@ -568,7 +585,8 @@ function resetUser(userId) {
   db.collection('users').doc(user.docId).update({
     stars: 0,
     solved: [],
-    history: []
+    history: [],
+    cooldowns: {}
   }).then(() => showToast(`${user.name}의 데이터가 초기화되었습니다.`, 'success'))
     .catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
@@ -607,7 +625,7 @@ function handleAddUser(e) {
   }
 
   db.collection('users').add({
-    id, pw, name, role, stars: 0, solved: [], history: []
+    id, pw, name, role, stars: 0, solved: [], history: [], cooldowns: {}
   }).then(() => {
     DOM.addUserForm.reset();
     DOM.addUserModal.classList.remove('show');
