@@ -2,6 +2,20 @@
    StarQuest — 지도 퀴즈 탐험 (Map Quiz Adventure)
    ========================================================= */
 
+// ─── FIREBASE INIT ──────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAvduPX3peGZfx_NwcMdWyOSU-K5yFGYLA",
+  authDomain: "churchsite-4dc71.firebaseapp.com",
+  projectId: "churchsite-4dc71",
+  storageBucket: "churchsite-4dc71.firebasestorage.app",
+  messagingSenderId: "418508143340",
+  appId: "1:418508143340:web:1b47d8806d467f8a6d43c9",
+  measurementId: "G-L7FE5FWJ9C"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 // ─── DATA STORE ─────────────────────────────────────────
 const DATA = {
   users: [
@@ -10,34 +24,64 @@ const DATA = {
     { id: 'user3', pw: 'pass3', name: '탐험가3', role: 'user', stars: 0, solved: [], history: [] },
     { id: 'admin', pw: 'admin123', name: '관리자', role: 'admin', stars: 0, solved: [], history: [] }
   ],
-
-  locations: [
-    { id: 1, name: '경복궁', lat: 37.5796, lng: 126.9770 },
-    { id: 2, name: '남산타워', lat: 37.5512, lng: 126.9882 },
-    { id: 3, name: '해운대 해수욕장', lat: 35.1587, lng: 129.1604 },
-    { id: 4, name: '제주 성산일출봉', lat: 33.4617, lng: 126.9425 },
-    { id: 5, name: '불국사', lat: 35.7900, lng: 129.3318 },
-    { id: 6, name: '전주 한옥마을', lat: 35.8151, lng: 127.1530 },
-    { id: 7, name: '인천 차이나타운', lat: 37.4737, lng: 126.6183 },
-    { id: 8, name: '강릉 경포대', lat: 37.7948, lng: 128.8961 }
-  ],
-
-  quizzes: [
-    { id: 1, question: '대한민국의 수도는 어디인가요?', options: ['서울', '부산', '대구', '인천'], answer: 0 },
-    { id: 2, question: '한글을 창제한 왕은 누구인가요?', options: ['세종대왕', '태종', '성종', '영조'], answer: 0 },
-    { id: 3, question: '대한민국에서 가장 높은 산은?', options: ['한라산', '지리산', '설악산', '북한산'], answer: 0 },
-    { id: 4, question: '김치의 주 재료는 무엇인가요?', options: ['배추', '오이', '무', '양파'], answer: 0 },
-    { id: 5, question: '태극기의 가운데 원은 무엇을 상징하나요?', options: ['우주의 조화', '하늘', '바다', '대지'], answer: 0 },
-    { id: 6, question: '한국의 전통 의복을 무엇이라 하나요?', options: ['한복', '기모노', '치파오', '아오자이'], answer: 0 },
-    { id: 7, question: '경복궁은 어느 왕조의 궁궐인가요?', options: ['조선', '고려', '백제', '신라'], answer: 0 },
-    { id: 8, question: '대한민국의 국화(國花)는?', options: ['무궁화', '장미', '벚꽃', '국화'], answer: 0 },
-    { id: 9, question: '비빔밥의 핵심 양념은?', options: ['고추장', '된장', '간장', '쌈장'], answer: 0 },
-    { id: 10, question: '한국 전쟁이 발발한 연도는?', options: ['1950년', '1945년', '1953년', '1948년'], answer: 0 }
-  ],
-
-  nextLocId: 9,
-  nextQuizId: 11
+  locations: [],
+  quizzes: []
 };
+
+const DEFAULT_LOCATIONS = [
+  { name: '경복궁', lat: 37.5796, lng: 126.9770 },
+  { name: '남산타워', lat: 37.5512, lng: 126.9882 },
+  { name: '해운대 해수욕장', lat: 35.1587, lng: 129.1604 },
+  { name: '제주 성산일출봉', lat: 33.4617, lng: 126.9425 },
+  { name: '불국사', lat: 35.7900, lng: 129.3318 },
+  { name: '전주 한옥마을', lat: 35.8151, lng: 127.1530 },
+  { name: '인천 차이나타운', lat: 37.4737, lng: 126.6183 },
+  { name: '강릉 경포대', lat: 37.7948, lng: 128.8961 }
+];
+
+const DEFAULT_QUIZZES = [
+  { question: '대한민국의 수도는 어디인가요?', options: ['서울', '부산', '대구', '인천'], answer: 0 },
+  { question: '한글을 창제한 왕은 누구인가요?', options: ['세종대왕', '태종', '성종', '영조'], answer: 0 },
+  { question: '대한민국에서 가장 높은 산은?', options: ['한라산', '지리산', '설악산', '북한산'], answer: 0 },
+  { question: '김치의 주 재료는 무엇인가요?', options: ['배추', '오이', '무', '양파'], answer: 0 },
+  { question: '태극기의 가운데 원은 무엇을 상징하나요?', options: ['우주의 조화', '하늘', '바다', '대지'], answer: 0 },
+  { question: '한국의 전통 의복을 무엇이라 하나요?', options: ['한복', '기모노', '치파오', '아오자이'], answer: 0 },
+  { question: '경복궁은 어느 왕조의 궁궐인가요?', options: ['조선', '고려', '백제', '신라'], answer: 0 },
+  { question: '대한민국의 국화(國花)는?', options: ['무궁화', '장미', '벚꽃', '국화'], answer: 0 },
+  { question: '비빔밥의 핵심 양념은?', options: ['고추장', '된장', '간장', '쌈장'], answer: 0 },
+  { question: '한국 전쟁이 발발한 연도는?', options: ['1950년', '1945년', '1953년', '1948년'], answer: 0 }
+];
+
+// Listen to Firestore
+db.collection('locations').onSnapshot(snapshot => {
+  DATA.locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+  if (snapshot.empty && !window.hasPopulatedLocations) {
+    window.hasPopulatedLocations = true;
+    DEFAULT_LOCATIONS.forEach(loc => db.collection('locations').add(loc));
+  }
+  
+  if (currentUser && map) {
+    renderMarkers(false);
+    if (DOM.appScreen.classList.contains('active')) {
+      if ($('#page-admin').classList.contains('active')) renderLocationList();
+      if ($('#page-profile').classList.contains('active')) renderProfile();
+    }
+  }
+});
+
+db.collection('quizzes').onSnapshot(snapshot => {
+  DATA.quizzes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+  if (snapshot.empty && !window.hasPopulatedQuizzes) {
+    window.hasPopulatedQuizzes = true;
+    DEFAULT_QUIZZES.forEach(q => db.collection('quizzes').add(q));
+  }
+  
+  if (currentUser && $('#page-admin').classList.contains('active')) {
+    renderQuizList();
+  }
+});
 
 // ─── STATE ──────────────────────────────────────────────
 let currentUser = null;
@@ -208,7 +252,7 @@ function initMap() {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18
   }).addTo(map);
-  renderMarkers();
+  renderMarkers(true); // Fit bounds on initial load
   startGeolocation();
 }
 
@@ -293,7 +337,7 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
-function renderMarkers() {
+function renderMarkers(fit = false) {
   // Clear existing
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
@@ -316,7 +360,7 @@ function renderMarkers() {
   DOM.legendCount.textContent = `${remaining.length}개의 포인트가 남아있습니다`;
 
   // Fit map to show all markers
-  if (remaining.length > 0) {
+  if (fit && remaining.length > 0) {
     const bounds = L.latLngBounds(remaining.map(loc => [loc.lat, loc.lng]));
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
   }
@@ -398,7 +442,7 @@ function showResult(correct, location) {
     currentUser.stars++;
     currentUser.solved.push(location.id);
     updateStarDisplay();
-    // Remove marker
+    // Remove marker immediately from local view (onSnapshot will confirm)
     if (markers[location.id]) {
       map.removeLayer(markers[location.id]);
       delete markers[location.id];
@@ -499,17 +543,15 @@ function renderLocationList() {
 }
 
 function deleteQuiz(id) {
-  DATA.quizzes = DATA.quizzes.filter(q => q.id !== id);
-  renderQuizList();
-  showToast('퀴즈가 삭제되었습니다.', 'success');
+  db.collection('quizzes').doc(id).delete().then(() => {
+    showToast('퀴즈가 삭제되었습니다.', 'success');
+  });
 }
 
 function deleteLocation(id) {
-  DATA.locations = DATA.locations.filter(l => l.id !== id);
-  if (markers[id] && map) { map.removeLayer(markers[id]); delete markers[id]; }
-  renderLocationList();
-  DOM.legendCount.textContent = `${getUserRemainingLocations().length}개의 포인트가 남아있습니다`;
-  showToast('위치가 삭제되었습니다.', 'success');
+  db.collection('locations').doc(id).delete().then(() => {
+    showToast('위치가 삭제되었습니다.', 'success');
+  });
 }
 
 function handleAddQuiz(e) {
@@ -520,14 +562,14 @@ function handleAddQuiz(e) {
   const o3 = $('#quiz-o3').value.trim();
   const o4 = $('#quiz-o4').value.trim();
   if (!question || !o1 || !o2 || !o3 || !o4) return;
-  DATA.quizzes.push({
-    id: DATA.nextQuizId++,
+  
+  db.collection('quizzes').add({
     question, options: [o1, o2, o3, o4], answer: 0
+  }).then(() => {
+    DOM.addQuizForm.reset();
+    DOM.addQuizModal.classList.remove('show');
+    showToast('퀴즈가 추가되었습니다!', 'success');
   });
-  DOM.addQuizForm.reset();
-  DOM.addQuizModal.classList.remove('show');
-  renderQuizList();
-  showToast('퀴즈가 추가되었습니다!', 'success');
 }
 
 function handleAddLocation(e) {
@@ -536,27 +578,14 @@ function handleAddLocation(e) {
   const lat = parseFloat($('#loc-lat').value);
   const lng = parseFloat($('#loc-lng').value);
   if (!name || isNaN(lat) || isNaN(lng)) return;
-  const newLoc = { id: DATA.nextLocId++, name, lat, lng };
-  DATA.locations.push(newLoc);
-  // Add marker to map if map exists
-  if (map && !currentUser.solved.includes(newLoc.id)) {
-    const icon = L.divIcon({
-      className: 'custom-marker-wrapper',
-      html: '<div class="custom-marker">⭐</div>',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
-    });
-    const marker = L.marker([lat, lng], { icon })
-      .addTo(map)
-      .bindTooltip(name, { className: 'marker-tooltip', offset: [0, -25], direction: 'top' });
-    marker.on('click', () => openQuiz(newLoc));
-    markers[newLoc.id] = marker;
-  }
-  DOM.addLocationForm.reset();
-  DOM.addLocationModal.classList.remove('show');
-  renderLocationList();
-  DOM.legendCount.textContent = `${getUserRemainingLocations().length}개의 포인트가 남아있습니다`;
-  showToast('위치가 추가되었습니다!', 'success');
+  
+  db.collection('locations').add({
+    name, lat, lng
+  }).then(() => {
+    DOM.addLocationForm.reset();
+    DOM.addLocationModal.classList.remove('show');
+    showToast('위치가 추가되었습니다!', 'success');
+  });
 }
 
 // ─── EVENT LISTENERS ────────────────────────────────────
