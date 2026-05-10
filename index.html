@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="지도 위의 퀴즈 탐험 - 위치를 탐험하고 퀴즈를 풀어 별을 모으세요!">
+    <title>⭐ StarQuest - 지도 퀴즈 탐험</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ============ LOGIN SCREEN ============ -->
+    <div id="login-screen" class="screen active">
+        <div class="login-bg-particles" id="particles-container"></div>
+        <div class="login-container">
+            <div class="login-logo">
+                <div class="logo-star">⭐</div>
+                <h1 class="logo-title">StarQuest</h1>
+                <p class="logo-subtitle">지도 퀴즈 탐험</p>
+            </div>
+            <form id="login-form" class="login-form" autocomplete="off">
+                <div class="input-group">
+                    <label for="login-id">아이디</label>
+                    <input type="text" id="login-id" placeholder="아이디를 입력하세요" required>
+                    <div class="input-line"></div>
+                </div>
+                <div class="input-group">
+                    <label for="login-pw">비밀번호</label>
+                    <input type="password" id="login-pw" placeholder="비밀번호를 입력하세요" required>
+                    <div class="input-line"></div>
+                </div>
+                <button type="submit" id="login-btn" class="btn-primary">로그인</button>
+                <p id="login-error" class="login-error"></p>
+            </form>
+            <div class="login-accounts-hint">
+                <p>테스트 계정</p>
+                <div class="hint-grid">
+                    <span>user1 / pass1</span>
+                    <span>user2 / pass2</span>
+                    <span>user3 / pass3</span>
+                    <span class="admin-hint">admin / admin123</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MAIN APP ============ -->
+    <div id="app-screen" class="screen">
+        <!-- Top Navigation Bar -->
+        <nav id="top-nav" class="top-nav">
+            <div class="nav-left">
+                <span class="nav-logo">⭐ StarQuest</span>
+            </div>
+            <div class="nav-center">
+                <button id="nav-map-btn" class="nav-tab active" data-tab="map">
+                    <span class="tab-icon">🗺️</span> 지도
+                </button>
+                <button id="nav-profile-btn" class="nav-tab" data-tab="profile">
+                    <span class="tab-icon">👤</span> 프로필
+                </button>
+                <button id="nav-admin-btn" class="nav-tab admin-only" data-tab="admin" style="display:none;">
+                    <span class="tab-icon">⚙️</span> 관리자
+                </button>
+            </div>
+            <div class="nav-right">
+                <div class="nav-stars" id="nav-stars">
+                    <span class="star-icon">⭐</span>
+                    <span class="star-count" id="nav-star-count">0</span>
+                </div>
+                <div class="nav-user" id="nav-user-name">사용자</div>
+                <button id="logout-btn" class="btn-ghost">로그아웃</button>
+            </div>
+        </nav>
+
+        <!-- Map Page -->
+        <div id="page-map" class="page active">
+            <div id="map" class="map-container"></div>
+            <div class="map-legend" id="map-legend">
+                <h3>📍 퀴즈 포인트</h3>
+                <p id="legend-count">0개의 포인트가 남아있습니다</p>
+                <div class="legend-divider"></div>
+                <div class="legend-gps" id="legend-gps">
+                    <span class="gps-dot" id="gps-dot"></span>
+                    <span id="gps-status">GPS 연결 중...</span>
+                </div>
+                <p class="legend-hint">⭐ 근처 <strong id="radius-display">500m</strong> 이내에서 퀴즈 풀기 가능</p>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="page-profile" class="page">
+            <div class="profile-container">
+                <div class="profile-card">
+                    <div class="profile-avatar" id="profile-avatar">👤</div>
+                    <h2 class="profile-name" id="profile-name">사용자</h2>
+                    <p class="profile-role" id="profile-role">일반 사용자</p>
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="profile-stars">0</span>
+                            <span class="stat-label">획득한 별</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="profile-solved">0</span>
+                            <span class="stat-label">풀은 퀴즈</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="profile-remaining">0</span>
+                            <span class="stat-label">남은 위치</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-history">
+                    <h3>📜 퀴즈 기록</h3>
+                    <div id="quiz-history" class="history-list">
+                        <p class="empty-history">아직 풀은 퀴즈가 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Page -->
+        <div id="page-admin" class="page">
+            <div class="admin-container">
+                <h2 class="admin-title">⚙️ 관리자 패널</h2>
+                <div class="admin-grid">
+                    <!-- Quiz Management -->
+                    <div class="admin-section">
+                        <div class="admin-section-header">
+                            <h3>📝 퀴즈 관리</h3>
+                            <button id="add-quiz-btn" class="btn-accent">+ 퀴즈 추가</button>
+                        </div>
+                        <div id="quiz-list" class="admin-list"></div>
+                    </div>
+                    <!-- Location Management -->
+                    <div class="admin-section">
+                        <div class="admin-section-header">
+                            <h3>📍 위치 관리</h3>
+                            <button id="add-location-btn" class="btn-accent">+ 위치 추가</button>
+                        </div>
+                        <div id="location-list" class="admin-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ QUIZ MODAL ============ -->
+    <div id="quiz-modal" class="modal-overlay">
+        <div class="modal-content quiz-modal">
+            <div class="modal-header">
+                <h2 id="quiz-location-name">📍 위치 이름</h2>
+                <button id="quiz-close-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="quiz-body">
+                <p class="quiz-question" id="quiz-question">질문이 여기에 표시됩니다</p>
+                <div class="quiz-options" id="quiz-options"></div>
+            </div>
+            <div class="quiz-result" id="quiz-result" style="display:none;">
+                <div class="result-icon" id="result-icon">⭐</div>
+                <p class="result-text" id="result-text">정답입니다!</p>
+                <button id="result-close-btn" class="btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ ADD QUIZ MODAL ============ -->
+    <div id="add-quiz-modal" class="modal-overlay">
+        <div class="modal-content form-modal">
+            <div class="modal-header">
+                <h2>📝 퀴즈 추가</h2>
+                <button class="modal-close add-quiz-close">&times;</button>
+            </div>
+            <form id="add-quiz-form" class="modal-form">
+                <div class="form-group">
+                    <label for="quiz-q">질문</label>
+                    <textarea id="quiz-q" rows="3" placeholder="퀴즈 질문을 입력하세요" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="quiz-o1">선택지 1 (정답)</label>
+                    <input type="text" id="quiz-o1" placeholder="정답을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="quiz-o2">선택지 2</label>
+                    <input type="text" id="quiz-o2" placeholder="오답을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="quiz-o3">선택지 3</label>
+                    <input type="text" id="quiz-o3" placeholder="오답을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="quiz-o4">선택지 4</label>
+                    <input type="text" id="quiz-o4" placeholder="오답을 입력하세요" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-ghost add-quiz-close">취소</button>
+                    <button type="submit" class="btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ ADD LOCATION MODAL ============ -->
+    <div id="add-location-modal" class="modal-overlay">
+        <div class="modal-content form-modal">
+            <div class="modal-header">
+                <h2>📍 위치 추가</h2>
+                <button class="modal-close add-loc-close">&times;</button>
+            </div>
+            <form id="add-location-form" class="modal-form">
+                <div class="form-group">
+                    <label for="loc-name">위치 이름</label>
+                    <input type="text" id="loc-name" placeholder="예: 경복궁" required>
+                </div>
+                <div class="form-group">
+                    <label for="loc-lat">위도 (Latitude)</label>
+                    <input type="number" step="any" id="loc-lat" placeholder="예: 37.5796" required>
+                </div>
+                <div class="form-group">
+                    <label for="loc-lng">경도 (Longitude)</label>
+                    <input type="number" step="any" id="loc-lng" placeholder="예: 126.9770" required>
+                </div>
+                <p class="form-hint">💡 지도에서 클릭하여 좌표를 가져올 수도 있습니다.</p>
+                <div class="form-actions">
+                    <button type="button" class="btn-ghost add-loc-close">취소</button>
+                    <button type="submit" class="btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
