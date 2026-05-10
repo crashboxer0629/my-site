@@ -39,7 +39,7 @@ db.collection('users').onSnapshot(snapshot => {
       showToast('계정이 삭제되었습니다.', 'error');
       return;
     }
-    
+
     if ($('#page-admin').classList.contains('active')) {
       renderUserList();
     }
@@ -47,7 +47,7 @@ db.collection('users').onSnapshot(snapshot => {
 });
 db.collection('locations').onSnapshot(snapshot => {
   DATA.locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
+
   if (currentUser && map) {
     renderMarkers(false);
     if (DOM.appScreen.classList.contains('active')) {
@@ -59,7 +59,7 @@ db.collection('locations').onSnapshot(snapshot => {
 
 db.collection('quizzes').onSnapshot(snapshot => {
   DATA.quizzes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
+
   if (currentUser && $('#page-admin').classList.contains('active')) {
     renderQuizList();
   }
@@ -73,7 +73,7 @@ let activeQuiz = null;
 let activeLocationId = null;
 
 // ─── GEOLOCATION STATE ──────────────────────────────────
-const PROXIMITY_RADIUS = 500; // meters
+const PROXIMITY_RADIUS = 50; // meters
 let userLatLng = null;
 let userMarker = null;
 let userAccuracyCircle = null;
@@ -101,6 +101,7 @@ const DOM = {
   profileSolved: $('#profile-solved'),
   profileRemaining: $('#profile-remaining'),
   quizHistory: $('#quiz-history'),
+  leaderboardList: $('#leaderboard-list'),
   quizModal: $('#quiz-modal'),
   quizLocationName: $('#quiz-location-name'),
   quizQuestion: $('#quiz-question'),
@@ -446,7 +447,7 @@ function showResult(correct, location) {
     DOM.resultText.style.color = 'var(--gold)';
     newStars++;
     newSolved.push(location.id);
-    
+
     // Remove marker immediately from local view
     if (markers[location.id]) {
       map.removeLayer(markers[location.id]);
@@ -512,6 +513,44 @@ function renderProfile() {
       <div class="history-result ${h.correct ? 'correct' : 'wrong'}">${h.correct ? '정답' : '오답'}</div>
     `;
     DOM.quizHistory.appendChild(div);
+  });
+
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  if (!DOM.leaderboardList) return;
+  DOM.leaderboardList.innerHTML = '';
+  
+  // Sort users by stars descending
+  const sortedUsers = [...DATA.users].sort((a, b) => (b.stars || 0) - (a.stars || 0));
+  
+  sortedUsers.forEach((u, index) => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    
+    let rankIcon = '🏅';
+    if (index === 0) rankIcon = '🥇';
+    else if (index === 1) rankIcon = '🥈';
+    else if (index === 2) rankIcon = '🥉';
+
+    const isMe = u.id === currentUser.id;
+
+    // Apply slightly different background for current user
+    if (isMe) {
+      div.style.backgroundColor = 'rgba(251, 191, 36, 0.1)';
+      div.style.borderColor = 'var(--gold)';
+    }
+
+    div.innerHTML = `
+      <div class="history-icon">${rankIcon}</div>
+      <div class="history-info">
+        <strong>${u.name} ${isMe ? '(나)' : ''}</strong>
+        <span>푼 퀴즈: ${u.solved ? u.solved.length : 0}개</span>
+      </div>
+      <div class="history-result" style="color: var(--gold); font-size: 1.1rem; font-weight: bold;">⭐ ${u.stars || 0}</div>
+    `;
+    DOM.leaderboardList.appendChild(div);
   });
 }
 
@@ -618,7 +657,7 @@ function handleAddUser(e) {
   const name = $('#usr-name').value.trim();
   const role = $('#usr-role').value;
   if (!id || !pw || !name) return;
-  
+
   if (DATA.users.some(u => u.id === id)) {
     showToast('이미 존재하는 아이디입니다.', 'error');
     return;
@@ -641,7 +680,7 @@ function handleAddQuiz(e) {
   const o3 = $('#quiz-o3').value.trim();
   const o4 = $('#quiz-o4').value.trim();
   if (!question || !o1 || !o2 || !o3 || !o4) return;
-  
+
   db.collection('quizzes').add({
     question, options: [o1, o2, o3, o4], answer: 0
   }).then(() => {
@@ -657,7 +696,7 @@ function handleAddLocation(e) {
   const lat = parseFloat($('#loc-lat').value);
   const lng = parseFloat($('#loc-lng').value);
   if (!name || isNaN(lat) || isNaN(lng)) return;
-  
+
   db.collection('locations').add({
     name, lat, lng
   }).then(() => {
