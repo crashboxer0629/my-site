@@ -440,3 +440,44 @@ input, textarea, select { font-family: var(--font); outline: none; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 640px) {
+  /* Navigation */
+  .top-nav { padding: 0 10px; }
+  .nav-logo { display: none; }
+  .nav-user { display: none; }
+  .nav-tab { padding: 6px 8px; font-size: .8rem; gap: 4px; }
+  .tab-icon { font-size: .9rem; }
+  .nav-right { gap: 8px; }
+  .btn-ghost { padding: 6px 10px; font-size: .8rem; }
+  .nav-stars { padding: 4px 10px; }
+  
+  /* Map */
+  .map-legend { bottom: 16px; left: 16px; right: 16px; min-width: 0; padding: 14px 16px; }
+  
+  /* Profile */
+  .profile-container { padding: 24px 16px; }
+  .profile-card { padding: 32px 20px; }
+  .profile-stats { gap: 20px; }
+  .stat-value { font-size: 1.5rem; }
+  
+  /* Admin */
+  .admin-container { padding: 24px 16px; }
+  .admin-section { padding: 16px; }
+  .admin-section-header h3 { font-size: .95rem; }
+  .btn-accent { padding: 6px 12px; font-size: .8rem; }
+  
+  /* Modals */
+  .modal-overlay { padding: 16px; }
+  .quiz-body { padding: 20px 16px; }
+  .modal-form { padding: 16px; }
+  
+  /* Toast */
+  .toast-container { left: 16px; right: 16px; top: 76px; align-items: center; }
+  .toast { max-width: 100%; width: 100%; text-align: center; }
+  
+  /* Login */
+  .logo-title { font-size: 2rem; }
+  .login-form { padding: 28px 20px; }
+}
