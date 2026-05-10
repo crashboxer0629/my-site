@@ -18,12 +18,17 @@ const db = firebase.firestore();
 
 // ─── DATA STORE ─────────────────────────────────────────
 const DATA = {
-  users: [
-    { id: 'user1', pw: 'pass1', name: '탐험가1', role: 'user', stars: 0, solved: [], history: [] },
-    { id: 'user2', pw: 'pass2', name: '탐험가2', role: 'user', stars: 0, solved: [], history: [] },
-    { id: 'user3', pw: 'pass3', name: '탐험가3', role: 'user', stars: 0, solved: [], history: [] },
-    { id: 'admin', pw: 'admin123', name: '관리자', role: 'admin', stars: 0, solved: [], history: [] }
-  ],
+  users: [],
+  locations: [],
+  quizzes: []
+};
+
+const DEFAULT_USERS = [
+  { id: 'user1', pw: 'pass1', name: '탐험가1', role: 'user', stars: 0, solved: [], history: [] },
+  { id: 'user2', pw: 'pass2', name: '탐험가2', role: 'user', stars: 0, solved: [], history: [] },
+  { id: 'user3', pw: 'pass3', name: '탐험가3', role: 'user', stars: 0, solved: [], history: [] },
+  { id: 'admin', pw: 'admin123', name: '관리자', role: 'admin', stars: 0, solved: [], history: [] }
+];
   locations: [],
   quizzes: []
 };
@@ -53,6 +58,32 @@ const DEFAULT_QUIZZES = [
 ];
 
 // Listen to Firestore
+db.collection('users').onSnapshot(snapshot => {
+  DATA.users = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+
+  if (snapshot.empty && !window.hasPopulatedUsers) {
+    window.hasPopulatedUsers = true;
+    DEFAULT_USERS.forEach(u => db.collection('users').add(u));
+  }
+
+  if (currentUser) {
+    const updatedUser = DATA.users.find(u => u.id === currentUser.id);
+    if (updatedUser) {
+      currentUser = updatedUser;
+      updateStarDisplay();
+      if ($('#page-profile').classList.contains('active')) renderProfile();
+    } else {
+      // User was deleted
+      handleLogout();
+      showToast('계정이 삭제되었습니다.', 'error');
+      return;
+    }
+    
+    if ($('#page-admin').classList.contains('active')) {
+      renderUserList();
+    }
+  }
+});
 db.collection('locations').onSnapshot(snapshot => {
   DATA.locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   
@@ -137,7 +168,11 @@ const DOM = {
   quizList: $('#quiz-list'),
   locationList: $('#location-list'),
   toastContainer: $('#toast-container'),
-  particlesContainer: $('#particles-container')
+  particlesContainer: $('#particles-container'),
+  userList: $('#user-list'),
+  addUserBtn: $('#add-user-btn'),
+  addUserModal: $('#add-user-modal'),
+  addUserForm: $('#add-user-form')
 };
 
 // ─── UTILITIES ──────────────────────────────────────────
@@ -435,19 +470,22 @@ function showResult(correct, location) {
   quizBody.style.display = 'none';
   DOM.quizResult.style.display = '';
 
+  let newStars = currentUser.stars;
+  let newSolved = [...currentUser.solved];
+  let newHistory = [...currentUser.history];
+
   if (correct) {
     DOM.resultIcon.textContent = '⭐';
     DOM.resultText.textContent = '정답입니다! 별 1개를 획득했습니다!';
     DOM.resultText.style.color = 'var(--gold)';
-    currentUser.stars++;
-    currentUser.solved.push(location.id);
-    updateStarDisplay();
-    // Remove marker immediately from local view (onSnapshot will confirm)
+    newStars++;
+    newSolved.push(location.id);
+    
+    // Remove marker immediately from local view
     if (markers[location.id]) {
       map.removeLayer(markers[location.id]);
       delete markers[location.id];
     }
-    DOM.legendCount.textContent = `${getUserRemainingLocations().length}개의 포인트가 남아있습니다`;
   } else {
     DOM.resultIcon.textContent = '❌';
     DOM.resultText.textContent = '틀렸습니다! 다시 도전해보세요.';
@@ -455,11 +493,18 @@ function showResult(correct, location) {
   }
 
   // Record history
-  currentUser.history.unshift({
+  newHistory.unshift({
     locationName: location.name,
     question: activeQuiz.question,
     correct,
     time: new Date().toLocaleString('ko-KR')
+  });
+
+  // Update in Firestore
+  db.collection('users').doc(currentUser.docId).update({
+    stars: newStars,
+    solved: newSolved,
+    history: newHistory
   });
 }
 
@@ -504,8 +549,32 @@ function renderProfile() {
 
 // ─── ADMIN ──────────────────────────────────────────────
 function renderAdmin() {
+  renderUserList();
   renderQuizList();
   renderLocationList();
+}
+
+function renderUserList() {
+  DOM.userList.innerHTML = '';
+  DATA.users.forEach(u => {
+    const div = document.createElement('div');
+    div.className = 'admin-item';
+    div.innerHTML = `
+      <div class="admin-item-info">
+        <p>${u.name} (${u.id}) - ${u.role === 'admin' ? '👑 관리자' : '🧭 일반'}</p>
+        <span>⭐ ${u.stars}개 | 푼 퀴즈: ${u.solved.length}개</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-accent reset-btn" data-user-id="${u.id}" style="padding: 6px 10px;">초기화</button>
+        <button class="btn-danger delete-btn" data-user-id="${u.id}" ${u.id === currentUser.id ? 'disabled' : ''}>삭제</button>
+      </div>
+    `;
+    div.querySelector('.reset-btn').addEventListener('click', () => resetUser(u.id));
+    if (u.id !== currentUser.id) {
+      div.querySelector('.delete-btn').addEventListener('click', () => deleteUser(u.id));
+    }
+    DOM.userList.appendChild(div);
+  });
 }
 
 function renderQuizList() {
@@ -542,6 +611,24 @@ function renderLocationList() {
   });
 }
 
+function resetUser(userId) {
+  const user = DATA.users.find(u => u.id === userId);
+  if (!user) return;
+  db.collection('users').doc(user.docId).update({
+    stars: 0,
+    solved: [],
+    history: []
+  }).then(() => showToast(`${user.name}의 데이터가 초기화되었습니다.`, 'success'));
+}
+
+function deleteUser(userId) {
+  const user = DATA.users.find(u => u.id === userId);
+  if (!user) return;
+  db.collection('users').doc(user.docId).delete().then(() => {
+    showToast('사용자가 삭제되었습니다.', 'success');
+  });
+}
+
 function deleteQuiz(id) {
   db.collection('quizzes').doc(id).delete().then(() => {
     showToast('퀴즈가 삭제되었습니다.', 'success');
@@ -551,6 +638,28 @@ function deleteQuiz(id) {
 function deleteLocation(id) {
   db.collection('locations').doc(id).delete().then(() => {
     showToast('위치가 삭제되었습니다.', 'success');
+  });
+}
+
+function handleAddUser(e) {
+  e.preventDefault();
+  const id = $('#usr-id').value.trim();
+  const pw = $('#usr-pw').value.trim();
+  const name = $('#usr-name').value.trim();
+  const role = $('#usr-role').value;
+  if (!id || !pw || !name) return;
+  
+  if (DATA.users.some(u => u.id === id)) {
+    showToast('이미 존재하는 아이디입니다.', 'error');
+    return;
+  }
+
+  db.collection('users').add({
+    id, pw, name, role, stars: 0, solved: [], history: []
+  }).then(() => {
+    DOM.addUserForm.reset();
+    DOM.addUserModal.classList.remove('show');
+    showToast('사용자가 추가되었습니다!', 'success');
   });
 }
 
@@ -604,15 +713,19 @@ DOM.quizModal.addEventListener('click', (e) => {
 
 DOM.addQuizBtn.addEventListener('click', () => DOM.addQuizModal.classList.add('show'));
 DOM.addLocationBtn.addEventListener('click', () => DOM.addLocationModal.classList.add('show'));
+DOM.addUserBtn.addEventListener('click', () => DOM.addUserModal.classList.add('show'));
 
 $$('.add-quiz-close').forEach(el => el.addEventListener('click', () => DOM.addQuizModal.classList.remove('show')));
 $$('.add-loc-close').forEach(el => el.addEventListener('click', () => DOM.addLocationModal.classList.remove('show')));
+$$('.add-user-close').forEach(el => el.addEventListener('click', () => DOM.addUserModal.classList.remove('show')));
 
 DOM.addQuizForm.addEventListener('submit', handleAddQuiz);
 DOM.addLocationForm.addEventListener('submit', handleAddLocation);
+DOM.addUserForm.addEventListener('submit', handleAddUser);
 
 DOM.addQuizModal.addEventListener('click', (e) => { if (e.target === DOM.addQuizModal) DOM.addQuizModal.classList.remove('show'); });
 DOM.addLocationModal.addEventListener('click', (e) => { if (e.target === DOM.addLocationModal) DOM.addLocationModal.classList.remove('show'); });
+DOM.addUserModal.addEventListener('click', (e) => { if (e.target === DOM.addUserModal) DOM.addUserModal.classList.remove('show'); });
 
 // ─── INIT ───────────────────────────────────────────────
 createParticles();

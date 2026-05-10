@@ -128,6 +128,15 @@
             <div class="admin-container">
                 <h2 class="admin-title">⚙️ 관리자 패널</h2>
                 <div class="admin-grid">
+                    <!-- User Management -->
+                    <div class="admin-section" style="grid-column: 1 / -1;">
+                        <div class="admin-section-header">
+                            <h3>👥 사용자 관리</h3>
+                            <button id="add-user-btn" class="btn-accent">+ 사용자 추가</button>
+                        </div>
+                        <div id="user-list" class="admin-list" style="max-height: 200px;"></div>
+                    </div>
+                    
                     <!-- Quiz Management -->
                     <div class="admin-section">
                         <div class="admin-section-header">
@@ -227,6 +236,41 @@
                 <p class="form-hint">💡 지도에서 클릭하여 좌표를 가져올 수도 있습니다.</p>
                 <div class="form-actions">
                     <button type="button" class="btn-ghost add-loc-close">취소</button>
+                    <button type="submit" class="btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ ADD USER MODAL ============ -->
+    <div id="add-user-modal" class="modal-overlay">
+        <div class="modal-content form-modal">
+            <div class="modal-header">
+                <h2>👥 사용자 추가</h2>
+                <button class="modal-close add-user-close">&times;</button>
+            </div>
+            <form id="add-user-form" class="modal-form">
+                <div class="form-group">
+                    <label for="usr-id">아이디</label>
+                    <input type="text" id="usr-id" placeholder="로그인에 사용할 아이디" required>
+                </div>
+                <div class="form-group">
+                    <label for="usr-pw">비밀번호</label>
+                    <input type="text" id="usr-pw" placeholder="비밀번호" required>
+                </div>
+                <div class="form-group">
+                    <label for="usr-name">이름 (닉네임)</label>
+                    <input type="text" id="usr-name" placeholder="표시될 이름" required>
+                </div>
+                <div class="form-group">
+                    <label for="usr-role">권한</label>
+                    <select id="usr-role" style="width: 100%; padding: 10px; background: var(--bg-surface); color: var(--text); border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius-sm);">
+                        <option value="user">일반 탐험가</option>
+                        <option value="admin">관리자</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-ghost add-user-close">취소</button>
                     <button type="submit" class="btn-primary">추가</button>
                 </div>
             </form>
