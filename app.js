@@ -522,17 +522,36 @@ function renderLeaderboard() {
   if (!DOM.leaderboardList) return;
   DOM.leaderboardList.innerHTML = '';
   
-  // Sort users by stars descending
-  const sortedUsers = [...DATA.users].sort((a, b) => (b.stars || 0) - (a.stars || 0));
+  // 1. 관리자 제외 및 정렬 (별 개수 내림차순 -> 이름 오름차순)
+  const sortedUsers = DATA.users
+    .filter(u => u.role !== 'admin')
+    .sort((a, b) => {
+      const starsDiff = (b.stars || 0) - (a.stars || 0);
+      if (starsDiff !== 0) return starsDiff;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   
+  let currentRank = 1;
+
   sortedUsers.forEach((u, index) => {
+    // 2. 공동 순위 계산
+    if (index > 0) {
+      const prevStars = sortedUsers[index - 1].stars || 0;
+      const myStars = u.stars || 0;
+      if (myStars < prevStars) {
+        currentRank = index + 1; // 별 개수가 이전 사람보다 적으면 현재 인덱스 + 1 로 순위 갱신
+      }
+    }
+
     const div = document.createElement('div');
     div.className = 'history-item';
     
-    let rankIcon = '🏅';
-    if (index === 0) rankIcon = '🥇';
-    else if (index === 1) rankIcon = '🥈';
-    else if (index === 2) rankIcon = '🥉';
+    // 3. 순위에 따른 아이콘/텍스트 표시
+    let rankIcon = '';
+    if (currentRank === 1) rankIcon = '🥇';
+    else if (currentRank === 2) rankIcon = '🥈';
+    else if (currentRank === 3) rankIcon = '🥉';
+    else rankIcon = `<span style="font-size: 1rem; font-weight: bold; color: var(--text-muted);">${currentRank}위</span>`;
 
     const isMe = u.id === currentUser.id;
 
@@ -543,7 +562,7 @@ function renderLeaderboard() {
     }
 
     div.innerHTML = `
-      <div class="history-icon">${rankIcon}</div>
+      <div class="history-icon" style="display: flex; align-items: center; justify-content: center;">${rankIcon}</div>
       <div class="history-info">
         <strong>${u.name} ${isMe ? '(나)' : ''}</strong>
         <span>푼 퀴즈: ${u.solved ? u.solved.length : 0}개</span>
