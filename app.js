@@ -23,46 +23,9 @@ const DATA = {
   quizzes: []
 };
 
-const DEFAULT_USERS = [
-  { id: 'user1', pw: 'pass1', name: '탐험가1', role: 'user', stars: 0, solved: [], history: [] },
-  { id: 'user2', pw: 'pass2', name: '탐험가2', role: 'user', stars: 0, solved: [], history: [] },
-  { id: 'user3', pw: 'pass3', name: '탐험가3', role: 'user', stars: 0, solved: [], history: [] },
-  { id: 'admin', pw: 'admin123', name: '관리자', role: 'admin', stars: 0, solved: [], history: [] }
-];
-
-
-const DEFAULT_LOCATIONS = [
-  { name: '경복궁', lat: 37.5796, lng: 126.9770 },
-  { name: '남산타워', lat: 37.5512, lng: 126.9882 },
-  { name: '해운대 해수욕장', lat: 35.1587, lng: 129.1604 },
-  { name: '제주 성산일출봉', lat: 33.4617, lng: 126.9425 },
-  { name: '불국사', lat: 35.7900, lng: 129.3318 },
-  { name: '전주 한옥마을', lat: 35.8151, lng: 127.1530 },
-  { name: '인천 차이나타운', lat: 37.4737, lng: 126.6183 },
-  { name: '강릉 경포대', lat: 37.7948, lng: 128.8961 }
-];
-
-const DEFAULT_QUIZZES = [
-  { question: '대한민국의 수도는 어디인가요?', options: ['서울', '부산', '대구', '인천'], answer: 0 },
-  { question: '한글을 창제한 왕은 누구인가요?', options: ['세종대왕', '태종', '성종', '영조'], answer: 0 },
-  { question: '대한민국에서 가장 높은 산은?', options: ['한라산', '지리산', '설악산', '북한산'], answer: 0 },
-  { question: '김치의 주 재료는 무엇인가요?', options: ['배추', '오이', '무', '양파'], answer: 0 },
-  { question: '태극기의 가운데 원은 무엇을 상징하나요?', options: ['우주의 조화', '하늘', '바다', '대지'], answer: 0 },
-  { question: '한국의 전통 의복을 무엇이라 하나요?', options: ['한복', '기모노', '치파오', '아오자이'], answer: 0 },
-  { question: '경복궁은 어느 왕조의 궁궐인가요?', options: ['조선', '고려', '백제', '신라'], answer: 0 },
-  { question: '대한민국의 국화(國花)는?', options: ['무궁화', '장미', '벚꽃', '국화'], answer: 0 },
-  { question: '비빔밥의 핵심 양념은?', options: ['고추장', '된장', '간장', '쌈장'], answer: 0 },
-  { question: '한국 전쟁이 발발한 연도는?', options: ['1950년', '1945년', '1953년', '1948년'], answer: 0 }
-];
-
 // Listen to Firestore
 db.collection('users').onSnapshot(snapshot => {
   DATA.users = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-
-  if (snapshot.empty && !window.hasPopulatedUsers) {
-    window.hasPopulatedUsers = true;
-    DEFAULT_USERS.forEach(u => db.collection('users').add(u));
-  }
 
   if (currentUser) {
     const updatedUser = DATA.users.find(u => u.id === currentUser.id);
@@ -85,11 +48,6 @@ db.collection('users').onSnapshot(snapshot => {
 db.collection('locations').onSnapshot(snapshot => {
   DATA.locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   
-  if (snapshot.empty && !window.hasPopulatedLocations) {
-    window.hasPopulatedLocations = true;
-    DEFAULT_LOCATIONS.forEach(loc => db.collection('locations').add(loc));
-  }
-  
   if (currentUser && map) {
     renderMarkers(false);
     if (DOM.appScreen.classList.contains('active')) {
@@ -101,11 +59,6 @@ db.collection('locations').onSnapshot(snapshot => {
 
 db.collection('quizzes').onSnapshot(snapshot => {
   DATA.quizzes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
-  if (snapshot.empty && !window.hasPopulatedQuizzes) {
-    window.hasPopulatedQuizzes = true;
-    DEFAULT_QUIZZES.forEach(q => db.collection('quizzes').add(q));
-  }
   
   if (currentUser && $('#page-admin').classList.contains('active')) {
     renderQuizList();
@@ -616,7 +569,8 @@ function resetUser(userId) {
     stars: 0,
     solved: [],
     history: []
-  }).then(() => showToast(`${user.name}의 데이터가 초기화되었습니다.`, 'success'));
+  }).then(() => showToast(`${user.name}의 데이터가 초기화되었습니다.`, 'success'))
+    .catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function deleteUser(userId) {
@@ -624,19 +578,19 @@ function deleteUser(userId) {
   if (!user) return;
   db.collection('users').doc(user.docId).delete().then(() => {
     showToast('사용자가 삭제되었습니다.', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function deleteQuiz(id) {
   db.collection('quizzes').doc(id).delete().then(() => {
     showToast('퀴즈가 삭제되었습니다.', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function deleteLocation(id) {
   db.collection('locations').doc(id).delete().then(() => {
     showToast('위치가 삭제되었습니다.', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function handleAddUser(e) {
@@ -658,7 +612,7 @@ function handleAddUser(e) {
     DOM.addUserForm.reset();
     DOM.addUserModal.classList.remove('show');
     showToast('사용자가 추가되었습니다!', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function handleAddQuiz(e) {
@@ -676,7 +630,7 @@ function handleAddQuiz(e) {
     DOM.addQuizForm.reset();
     DOM.addQuizModal.classList.remove('show');
     showToast('퀴즈가 추가되었습니다!', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 function handleAddLocation(e) {
@@ -692,7 +646,7 @@ function handleAddLocation(e) {
     DOM.addLocationForm.reset();
     DOM.addLocationModal.classList.remove('show');
     showToast('위치가 추가되었습니다!', 'success');
-  });
+  }).catch(err => showToast('권한 에러: 데이터베이스 규칙을 확인하세요.', 'error'));
 }
 
 // ─── EVENT LISTENERS ────────────────────────────────────
